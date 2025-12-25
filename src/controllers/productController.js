@@ -16,31 +16,39 @@ export const createProduct = async (req, res) => {
  * GET all products
  */
 export const getProducts = async (req, res) => {
-  const products = await Product.find()
-    .populate("category", "name")
-    .sort({ createdAt: -1 });
+  try {
+    const products = await Product.find()
+      .populate("category", "name")
+      .sort({ createdAt: -1 });
 
-  res.json(products);
+    res.json(products);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
 };
 
 /**
  * GET product by ID
  */
 export const getProductById = async (req, res) => {
-  const product = await Product.findById(req.params.id).populate(
-    "category",
-    "name"
-  );
+  try {
+    const product = await Product.findById(req.params.id).populate(
+      "category",
+      "name"
+    );
 
-  if (!product) {
-    return res.status(404).json({ message: "Product not found" });
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  res.json(product);
 };
 
 /**
- * UPDATE product (✅ guaranteed stock history)
+ * UPDATE product (✅ FINAL – stock history guaranteed)
  */
 export const updateProduct = async (req, res) => {
   try {
@@ -50,30 +58,29 @@ export const updateProduct = async (req, res) => {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    const { name, price, quantity, category } = req.body;
+    const oldQty = product.quantity;
+    const newQty = Number(req.body.quantity);
 
-    // ✅ Track stock change ONLY if quantity changed
-    if (
-      typeof quantity === "number" &&
-      quantity !== product.quantity
-    ) {
+    // ✅ TRACK STOCK CHANGE
+    if (!Number.isNaN(newQty) && oldQty !== newQty) {
       product.stockHistory.push({
-        previousQty: product.quantity,
-        newQty: quantity,
+        previousQty: oldQty,
+        newQty: newQty,
         date: new Date(),
       });
-
-      product.quantity = quantity;
     }
 
-    if (name !== undefined) product.name = name;
-    if (price !== undefined) product.price = price;
-    if (category !== undefined) product.category = category;
+    // ✅ UPDATE FIELDS
+    product.name = req.body.name;
+    product.price = req.body.price;
+    product.quantity = newQty;
+    product.category = req.body.category;
 
     await product.save();
+
     res.json(product);
-  } catch (err) {
-    res.status(500).json({ message: err.message });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -81,12 +88,16 @@ export const updateProduct = async (req, res) => {
  * DELETE product
  */
 export const deleteProduct = async (req, res) => {
-  const product = await Product.findById(req.params.id);
+  try {
+    const product = await Product.findById(req.params.id);
 
-  if (!product) {
-    return res.status(404).json({ message: "Product not found" });
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    await product.deleteOne();
+    res.json({ message: "Product deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
-
-  await product.deleteOne();
-  res.json({ message: "Product deleted successfully" });
 };

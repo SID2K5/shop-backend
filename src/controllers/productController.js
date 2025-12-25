@@ -13,7 +13,7 @@ export const createProduct = async (req, res) => {
 };
 
 /**
- * GET all products (✅ populate category)
+ * GET all products
  */
 export const getProducts = async (req, res) => {
   const products = await Product.find()
@@ -40,34 +40,36 @@ export const getProductById = async (req, res) => {
 };
 
 /**
- * UPDATE product (stock history preserved)
+ * UPDATE product (✅ SINGLE SOURCE OF TRUTH for stock history)
  */
 export const updateProduct = async (req, res) => {
   try {
     const { name, price, quantity, category } = req.body;
 
     const product = await Product.findById(req.params.id);
-
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // ✅ Track stock change
-    if (quantity !== undefined && quantity !== product.quantity) {
+    // ✅ Track quantity change
+    if (
+      quantity !== undefined &&
+      Number(quantity) !== Number(product.quantity)
+    ) {
       product.stockHistory.push({
         previousQty: product.quantity,
-        newQty: quantity
+        newQty: quantity,
       });
+
+      product.quantity = quantity;
     }
 
-    // Update fields
-    product.name = name;
-    product.price = price;
-    product.quantity = quantity;
-    product.category = category;
+    // Update remaining fields safely
+    if (name !== undefined) product.name = name;
+    if (price !== undefined) product.price = price;
+    if (category !== undefined) product.category = category;
 
     await product.save();
-
     res.json(product);
   } catch (err) {
     res.status(500).json({ message: err.message });

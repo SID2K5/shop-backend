@@ -40,31 +40,32 @@ export const getProductById = async (req, res) => {
 };
 
 /**
- * UPDATE product (✅ SINGLE SOURCE OF TRUTH for stock history)
+ * UPDATE product (✅ guaranteed stock history)
  */
 export const updateProduct = async (req, res) => {
   try {
-    const { name, price, quantity, category } = req.body;
-
     const product = await Product.findById(req.params.id);
+
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    // ✅ Track quantity change
+    const { name, price, quantity, category } = req.body;
+
+    // ✅ Track stock change ONLY if quantity changed
     if (
-      quantity !== undefined &&
-      Number(quantity) !== Number(product.quantity)
+      typeof quantity === "number" &&
+      quantity !== product.quantity
     ) {
       product.stockHistory.push({
         previousQty: product.quantity,
         newQty: quantity,
+        date: new Date(),
       });
 
       product.quantity = quantity;
     }
 
-    // Update remaining fields safely
     if (name !== undefined) product.name = name;
     if (price !== undefined) product.price = price;
     if (category !== undefined) product.category = category;

@@ -19,8 +19,15 @@ connectDB();
 // Init app
 const app = express();
 
-// Middlewares
-app.use(cors());
+/* ================= CORS (FINAL LOCK) ================= */
+app.use(
+  cors({
+    origin: "https://shop-frontend-pearl.vercel.app",
+    credentials: true,
+  })
+);
+
+/* ================= MIDDLEWARES ================= */
 app.use(express.json());
 
 // Health check

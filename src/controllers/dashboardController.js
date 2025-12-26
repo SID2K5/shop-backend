@@ -1,4 +1,5 @@
 import Product from "../models/Product.js";
+import Category from "../models/Category.js";
 
 /**
  * GET /api/dashboard
@@ -6,30 +7,40 @@ import Product from "../models/Product.js";
  */
 export const getDashboardData = async (req, res) => {
   try {
-    // ---------------------------
-    // Fetch all products
-    // ---------------------------
-    const products = await Product.find().populate("category", "name");
+    // ------------------------------------------------
+    // 1. Get ACTIVE category IDs (not names)
+    // ------------------------------------------------
+    const activeCategories = await Category.find({ status: "Active" }).select("_id");
+    const activeCategoryIds = activeCategories.map(c => c._id);
 
-    // ---------------------------
-    // Snapshot stats
-    // ---------------------------
+    // ------------------------------------------------
+    // 2. Get products belonging to active categories
+    // ------------------------------------------------
+    const products = await Product.find({
+      category: { $in: activeCategoryIds },
+    });
+
+    // ------------------------------------------------
+    // 3. Snapshot stats
+    // ------------------------------------------------
     const totalProducts = products.length;
 
     const lowStock = products.filter(
-      (p) => p.quantity > 0 && p.quantity < 5
+      p => p.quantity > 0 && p.quantity < 5
     ).length;
 
-    const outOfStock = products.filter((p) => p.quantity === 0).length;
+    const outOfStock = products.filter(
+      p => p.quantity === 0
+    ).length;
 
     const inventoryValue = products.reduce(
       (sum, p) => sum + p.price * p.quantity,
       0
     );
 
-    // ---------------------------
-    // Today stats
-    // ---------------------------
+    // ------------------------------------------------
+    // 4. Today's activity
+    // ------------------------------------------------
     const todayStr = new Date().toDateString();
 
     let unitsSoldToday = 0;
@@ -38,64 +49,62 @@ export const getDashboardData = async (req, res) => {
     const todayActivity = [];
 
     for (const product of products) {
-      if (!product.stockHistory) continue;
+      for (const entry of product.stockHistory || []) {
+        if (new Date(entry.date).toDateString() === todayStr) {
 
-      for (const entry of product.stockHistory) {
-        if (new Date(entry.date).toDateString() !== todayStr) continue;
+          // Sold
+          if (entry.newQty < entry.previousQty) {
+            const sold = entry.previousQty - entry.newQty;
+            unitsSoldToday += sold;
+            revenueToday += sold * product.price;
 
-        // Sold
-        if (entry.newQty < entry.previousQty) {
-          const sold = entry.previousQty - entry.newQty;
+            salesByProduct[product.name] =
+              (salesByProduct[product.name] || 0) + sold;
 
-          unitsSoldToday += sold;
-          revenueToday += sold * product.price;
+            todayActivity.push({
+              product: product.name,
+              type: "Sold",
+              qty: sold,
+              time: new Date(entry.date).toLocaleTimeString(),
+              color: "bg-red-500",
+            });
+          }
 
-          salesByProduct[product.name] =
-            (salesByProduct[product.name] || 0) + sold;
+          // Stock Added
+          if (entry.newQty > entry.previousQty) {
+            todayActivity.push({
+              product: product.name,
+              type: "Stock Added",
+              qty: entry.newQty - entry.previousQty,
+              time: new Date(entry.date).toLocaleTimeString(),
+              color: "bg-green-500",
+            });
+          }
 
-          todayActivity.push({
-            product: product.name,
-            type: "Sold",
-            qty: sold,
-            time: new Date(entry.date).toLocaleTimeString(),
-            color: "bg-red-500",
-          });
-        }
-
-        // Stock Added
-        if (entry.newQty > entry.previousQty) {
-          todayActivity.push({
-            product: product.name,
-            type: "Stock Added",
-            qty: entry.newQty - entry.previousQty,
-            time: new Date(entry.date).toLocaleTimeString(),
-            color: "bg-green-500",
-          });
-        }
-
-        // Low Stock
-        if (entry.newQty > 0 && entry.newQty < 5) {
-          todayActivity.push({
-            product: product.name,
-            type: "Low Stock",
-            qty: entry.newQty,
-            time: new Date(entry.date).toLocaleTimeString(),
-            color: "bg-yellow-500",
-          });
+          // Low Stock Warning
+          if (entry.newQty < 5) {
+            todayActivity.push({
+              product: product.name,
+              type: "Low Stock",
+              qty: entry.newQty,
+              time: new Date(entry.date).toLocaleTimeString(),
+              color: "bg-yellow-500",
+            });
+          }
         }
       }
     }
 
-    // ---------------------------
-    // Chart data
-    // ---------------------------
+    // ------------------------------------------------
+    // 5. Chart Data
+    // ------------------------------------------------
     const salesChart = Object.entries(salesByProduct).map(
       ([name, qty]) => ({ name, qty })
     );
 
-    // ---------------------------
-    // Response
-    // ---------------------------
+    // ------------------------------------------------
+    // 6. Response
+    // ------------------------------------------------
     res.status(200).json({
       snapshot: {
         totalProducts,
@@ -110,6 +119,7 @@ export const getDashboardData = async (req, res) => {
       },
       todayActivity: todayActivity.slice(-6).reverse(),
     });
+
   } catch (error) {
     console.error("Dashboard error:", error);
     res.status(500).json({ message: "Dashboard data fetch failed" });

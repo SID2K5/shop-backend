@@ -43,40 +43,37 @@ export const getProductById = async (req, res) => {
  * UPDATE product (🔥 HISTORY ALWAYS TRACKED)
  */
 export const updateProduct = async (req, res) => {
+  console.log("🔥 UPDATE PRODUCT HIT", req.params.id, req.body);
+
   try {
     const product = await Product.findById(req.params.id);
-
     if (!product) {
       return res.status(404).json({ message: "Product not found" });
     }
 
-    const oldQty = Number(product.quantity);
+    const oldQty = product.quantity;
     const newQty = Number(req.body.quantity);
 
-    // ✅ FORCE numeric comparison
-    if (!Number.isNaN(newQty) && oldQty !== newQty) {
+    if (oldQty !== newQty) {
       product.stockHistory.push({
         previousQty: oldQty,
-        newQty: newQty,
+        newQty,
         date: new Date(),
       });
-
-      product.quantity = newQty;
     }
 
-    if (req.body.name !== undefined) product.name = req.body.name;
-    if (req.body.price !== undefined)
-      product.price = Number(req.body.price);
-    if (req.body.category !== undefined)
-      product.category = req.body.category;
+    product.name = req.body.name;
+    product.price = req.body.price;
+    product.quantity = newQty;
+    product.category = req.body.category;
 
     await product.save();
-
     res.json(product);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
   }
 };
+
 
 /**
  * DELETE product

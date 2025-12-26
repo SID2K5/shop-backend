@@ -8,16 +8,16 @@ import Category from "../models/Category.js";
 export const getDashboardData = async (req, res) => {
   try {
     // ---------------------------
-    // Fetch active categories
+    // Fetch active categories (IDs)
     // ---------------------------
-    const activeCategories = await Category.find({ status: "Active" }).select("name");
-    const activeCategoryNames = activeCategories.map(c => c.name);
+    const activeCategories = await Category.find({ status: "Active" }).select("_id");
+    const activeCategoryIds = activeCategories.map(c => c._id);
 
     // ---------------------------
     // Fetch products in active categories
     // ---------------------------
     const products = await Product.find({
-      category: { $in: activeCategoryNames },
+      category: { $in: activeCategoryIds },
     });
 
     // ---------------------------
@@ -26,10 +26,12 @@ export const getDashboardData = async (req, res) => {
     const totalProducts = products.length;
 
     const lowStock = products.filter(
-      p => p.quantity > 0 && p.quantity < 5
+      p => p.quantity > 0 && p.quantity <= 5
     ).length;
 
-    const outOfStock = products.filter(p => p.quantity === 0).length;
+    const outOfStock = products.filter(
+      p => p.quantity === 0
+    ).length;
 
     const inventoryValue = products.reduce(
       (sum, p) => sum + p.price * p.quantity,
@@ -50,7 +52,7 @@ export const getDashboardData = async (req, res) => {
       product.stockHistory?.forEach(entry => {
         if (new Date(entry.date).toDateString() === today) {
 
-          // SALES
+          // SOLD
           if (entry.newQty < entry.previousQty) {
             const sold = entry.previousQty - entry.newQty;
 
@@ -63,7 +65,7 @@ export const getDashboardData = async (req, res) => {
             todayActivity.push({
               product: product.name,
               type: "Sold",
-              qty: entry.newQty,
+              qty: sold,
               time: new Date(entry.date).toLocaleTimeString(),
               color: "bg-red-500",
             });
@@ -74,14 +76,14 @@ export const getDashboardData = async (req, res) => {
             todayActivity.push({
               product: product.name,
               type: "Stock Added",
-              qty: entry.newQty,
+              qty: entry.newQty - entry.previousQty,
               time: new Date(entry.date).toLocaleTimeString(),
               color: "bg-green-500",
             });
           }
 
           // LOW STOCK
-          if (entry.newQty < 5) {
+          if (entry.newQty <= 5) {
             todayActivity.push({
               product: product.name,
               type: "Low Stock",

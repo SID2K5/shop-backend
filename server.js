@@ -13,24 +13,19 @@ connectDB();
 
 const app = express();
 
-/* ====== ALWAYS PARSE JSON ====== */
+/* ================= BODY PARSER ================= */
 app.use(express.json());
 
-/* ====== BULLETPROOF CORS ====== */
-app.use((req, res, next) => {
-  res.header("Access-Control-Allow-Origin", "https://inventory-frontend-psi-silk.vercel.app");
-  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.header("Access-Control-Allow-Credentials", "true");
+/* ================= CORS (SAFE FOR RENDER) ================= */
+app.use(
+  cors({
+    origin: "https://inventory-frontend-psi-silk.vercel.app",
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+  })
+);
 
-  if (req.method === "OPTIONS") {
-    return res.sendStatus(200);
-  }
-
-  next();
-});
-
-/* ====== ROUTES ====== */
+/* ================= ROUTES ================= */
 app.get("/", (req, res) => {
   res.json({ message: "Inventory Backend API running 🚀" });
 });
@@ -40,8 +35,8 @@ app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
-/* ====== START ====== */
+/* ================= SERVER ================= */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => {
-  console.log(`✅ Server running on port ${PORT}`);
-});
+app.listen(PORT, () =>
+  console.log(`✅ Server running on port ${PORT}`)
+);

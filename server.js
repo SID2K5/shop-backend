@@ -13,10 +13,10 @@ connectDB();
 
 const app = express();
 
-/* ================= CORE MIDDLEWARE ================= */
+/* ================= CORE ================= */
 app.use(express.json());
 
-/* ================= CORS (🔥 THIS FIXES LOGIN) ================= */
+/* ================= CORS (FINAL & CORRECT) ================= */
 app.use(
   cors({
     origin: [
@@ -24,13 +24,15 @@ app.use(
       "https://inventory-frontend-psi-silk.vercel.app",
     ],
     credentials: true,
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
   })
 );
 
-/* 🔥 HANDLE PREFLIGHT EXPLICITLY */
-app.options("*", cors());
+/* 🔥 CRITICAL: PREFLIGHT MUST RETURN 200 */
+app.options("*", (req, res) => {
+  res.sendStatus(200);
+});
 
 /* ================= ROUTES ================= */
 app.get("/", (req, res) => {
@@ -42,7 +44,7 @@ app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
-/* ================= START SERVER ================= */
+/* ================= START ================= */
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () =>
   console.log(`✅ Server running on port ${PORT}`)

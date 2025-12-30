@@ -1,6 +1,6 @@
 import express from "express";
-import cors from "cors";
 import dotenv from "dotenv";
+import cors from "cors";
 import connectDB from "./src/config/db.js";
 
 import authRoutes from "./src/routes/authRoutes.js";
@@ -13,24 +13,24 @@ connectDB();
 
 const app = express();
 
-/* ================= CORS — MUST BE FIRST ================= */
-app.use(
-  cors({
-    origin: "https://inventory-frontend-psi-silk.vercel.app",
-    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization"],
-  })
-);
-
-/* 🔥 PRE-FLIGHT HANDLER (NO CRASH GUARANTEED) */
-app.options("*", (req, res) => {
-  res.sendStatus(200);
-});
-
-/* ================= BODY PARSER ================= */
+/* ====== ALWAYS PARSE JSON ====== */
 app.use(express.json());
 
-/* ================= ROUTES ================= */
+/* ====== BULLETPROOF CORS ====== */
+app.use((req, res, next) => {
+  res.header("Access-Control-Allow-Origin", "https://inventory-frontend-psi-silk.vercel.app");
+  res.header("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.header("Access-Control-Allow-Credentials", "true");
+
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+
+  next();
+});
+
+/* ====== ROUTES ====== */
 app.get("/", (req, res) => {
   res.json({ message: "Inventory Backend API running 🚀" });
 });
@@ -40,8 +40,8 @@ app.use("/api/products", productRoutes);
 app.use("/api/categories", categoryRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 
-/* ================= START SERVER ================= */
+/* ====== START ====== */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () =>
-  console.log(`✅ Server running on port ${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`✅ Server running on port ${PORT}`);
+});

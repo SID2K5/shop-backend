@@ -105,7 +105,10 @@ export const getDashboardData = async (req, res) => {
         revenue: revenueToday,
         chartData: salesChart,
       },
-      todayActivity: todayActivity.slice(-6).reverse(),
+      todayActivity: todayActivity
+  .sort((a, b) => new Date(b.time) - new Date(a.time))
+  .slice(0, 15),
+
     });
   } catch (error) {
     console.error("Dashboard error:", error.message);

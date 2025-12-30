@@ -1,63 +1,83 @@
 import Category from "../models/Category.js";
 
 /**
- * GET all categories
+ * @desc    Get all categories
+ * @route   GET /api/categories
+ * @access  Private
  */
 export const getCategories = async (req, res) => {
   try {
     const categories = await Category.find().sort({ createdAt: -1 });
     res.json(categories);
-  } catch {
+  } catch (error) {
+    console.error("Get categories error:", error.message);
     res.status(500).json({ message: "Failed to fetch categories" });
   }
 };
 
 /**
- * GET category by ID
+ * @desc    Get category by ID
+ * @route   GET /api/categories/:id
+ * @access  Private
  */
 export const getCategoryById = async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
+
     if (!category) {
       return res.status(404).json({ message: "Category not found" });
     }
+
     res.json(category);
-  } catch {
+  } catch (error) {
+    console.error("Get category error:", error.message);
     res.status(400).json({ message: "Invalid category ID" });
   }
 };
 
 /**
- * CREATE category
+ * @desc    Create new category
+ * @route   POST /api/categories
+ * @access  Admin
  */
 export const createCategory = async (req, res) => {
   try {
     const name = req.body.name?.trim();
-    const status = req.body.status || "Active";
 
     if (!name) {
       return res.status(400).json({ message: "Category name is required" });
     }
 
-    const exists = await Category.findOne({ name });
+    // Normalize name (case-insensitive)
+    const exists = await Category.findOne({
+      name: new RegExp(`^${name}$`, "i"),
+    });
+
     if (exists) {
       return res.status(400).json({ message: "Category already exists" });
     }
 
-    const category = await Category.create({ name, status });
+    const category = await Category.create({
+      name,
+      status: req.body.status || "Active",
+    });
+
     res.status(201).json(category);
   } catch (error) {
-    console.error("Create category error:", error);
+    console.error("Create category error:", error.message);
     res.status(500).json({ message: "Failed to create category" });
   }
 };
 
 /**
- * UPDATE category (TOGGLE WORKS)
+ * @desc    Update category (rename / toggle)
+ * @route   PUT /api/categories/:id
+ * @access  Admin
  */
 export const updateCategory = async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
+
     if (!category) {
       return res.status(404).json({ message: "Category not found" });
     }
@@ -73,24 +93,28 @@ export const updateCategory = async (req, res) => {
     const updated = await category.save();
     res.json(updated);
   } catch (error) {
-    console.error("Update category error:", error);
+    console.error("Update category error:", error.message);
     res.status(500).json({ message: "Failed to update category" });
   }
 };
 
 /**
- * DELETE category
+ * @desc    Delete category
+ * @route   DELETE /api/categories/:id
+ * @access  Admin
  */
 export const deleteCategory = async (req, res) => {
   try {
     const category = await Category.findById(req.params.id);
+
     if (!category) {
       return res.status(404).json({ message: "Category not found" });
     }
 
     await category.deleteOne();
     res.json({ message: "Category deleted successfully" });
-  } catch {
+  } catch (error) {
+    console.error("Delete category error:", error.message);
     res.status(500).json({ message: "Failed to delete category" });
   }
 };

@@ -1,4 +1,3 @@
-// src/routes/productRoutes.js
 import express from "express";
 import {
   getProducts,
@@ -7,7 +6,7 @@ import {
   updateProduct,
   deleteProduct,
 } from "../controllers/productController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { protect, admin } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
@@ -20,7 +19,7 @@ router.get("/", protect, getProducts);
 
 /**
  * @route   GET /api/products/:id
- * @desc    Get single product (WITH stockHistory)
+ * @desc    Get single product
  * @access  Private
  */
 router.get("/:id", protect, getProductById);
@@ -28,22 +27,22 @@ router.get("/:id", protect, getProductById);
 /**
  * @route   POST /api/products
  * @desc    Create product
- * @access  Private
+ * @access  Admin
  */
-router.post("/", protect, createProduct);
+router.post("/", protect, admin, createProduct);
 
 /**
  * @route   PUT /api/products/:id
- * @desc    Update product + track stock history
- * @access  Private
+ * @desc    Update product
+ * @access  Admin
  */
-router.put("/:id", protect, updateProduct);
+router.put("/:id", protect, admin, updateProduct);
 
 /**
  * @route   DELETE /api/products/:id
  * @desc    Delete product
- * @access  Private
+ * @access  Admin
  */
-router.delete("/:id", protect, deleteProduct);
+router.delete("/:id", protect, admin, deleteProduct);
 
 export default router;

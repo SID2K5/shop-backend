@@ -5,8 +5,22 @@ import Product from "../models/Product.js";
  */
 export const createProduct = async (req, res) => {
   try {
-    const product = new Product(req.body);
-    await product.save();
+    const { name, price, quantity, category } = req.body;
+
+    const product = await Product.create({
+      name,
+      price,
+      quantity,
+      category,
+      stockHistory: [
+        {
+          previousQty: 0,
+          newQty: quantity,
+          date: new Date(),
+        },
+      ],
+    });
+
     res.status(201).json(product);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -17,86 +31,61 @@ export const createProduct = async (req, res) => {
  * GET ALL PRODUCTS
  */
 export const getProducts = async (req, res) => {
-  try {
-    const products = await Product.find()
-      .populate("category", "name")
-      .sort({ createdAt: -1 });
+  const products = await Product.find()
+    .populate("category", "name")
+    .sort({ createdAt: -1 });
 
-    res.json(products);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+  res.json(products);
 };
 
 /**
- * 🔥 GET PRODUCT BY ID (FOR HISTORY MODAL)
+ * GET PRODUCT BY ID (FOR HISTORY MODAL)
  */
 export const getProductById = async (req, res) => {
-  try {
-    console.log("📦 FETCH PRODUCT HISTORY", req.params.id);
+  const product = await Product.findById(req.params.id)
+    .populate("category", "name");
 
-    const product = await Product.findById(req.params.id)
-      .populate("category", "name")
-      .lean(); // IMPORTANT
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    // ensure history always exists
-    product.stockHistory = product.stockHistory || [];
-
-    res.json(product);
-  } catch (error) {
-    res.status(500).json({ message: error.message });
+  if (!product) {
+    return res.status(404).json({ message: "Product not found" });
   }
+
+  res.json(product);
 };
 
 /**
- * 🔥 UPDATE PRODUCT (TRACK STOCK HISTORY)
+ * UPDATE PRODUCT (TRACK HISTORY HERE)
  */
 export const updateProduct = async (req, res) => {
-  try {
-    console.log("🔥 UPDATE PRODUCT HIT", req.params.id, req.body);
+  const product = await Product.findById(req.params.id);
 
-    const product = await Product.findById(req.params.id);
-
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    // 🔥 TRACK STOCK CHANGE
-    if (
-      req.body.quantity !== undefined &&
-      req.body.quantity !== product.quantity
-    ) {
-      product.stockHistory.push({
-        previousQty: product.quantity,
-        newQty: req.body.quantity
-      });
-    }
-
-    product.name = req.body.name ?? product.name;
-    product.price = req.body.price ?? product.price;
-    product.quantity = req.body.quantity ?? product.quantity;
-    product.category = req.body.category ?? product.category;
-
-    await product.save();
-
-    res.json(product);
-  } catch (error) {
-    res.status(400).json({ message: error.message });
+  if (!product) {
+    return res.status(404).json({ message: "Product not found" });
   }
+
+  if (
+    req.body.quantity !== undefined &&
+    req.body.quantity !== product.quantity
+  ) {
+    product.stockHistory.push({
+      previousQty: product.quantity,
+      newQty: req.body.quantity,
+      date: new Date(),
+    });
+  }
+
+  product.name = req.body.name ?? product.name;
+  product.price = req.body.price ?? product.price;
+  product.quantity = req.body.quantity ?? product.quantity;
+  product.category = req.body.category ?? product.category;
+
+  await product.save();
+  res.json(product);
 };
 
 /**
  * DELETE PRODUCT
  */
 export const deleteProduct = async (req, res) => {
-  try {
-    await Product.findByIdAndDelete(req.params.id);
-    res.json({ message: "Product deleted" });
-  } catch (error) {
-    res.status(500).json({ message: error.message });
-  }
+  await Product.findByIdAndDelete(req.params.id);
+  res.json({ message: "Product deleted" });
 };

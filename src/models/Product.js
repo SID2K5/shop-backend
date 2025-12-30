@@ -4,32 +4,45 @@ const productSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: true
+      required: true,
+      trim: true,
     },
 
     category: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Category",
-      required: true
+      required: true,
     },
 
     price: {
       type: Number,
-      required: true
+      required: true,
+      min: 0,
     },
 
     quantity: {
       type: Number,
-      required: true
+      required: true,
+      min: 0,
     },
 
+    /* ================= STOCK HISTORY ================= */
     stockHistory: [
       {
-        previousQty: Number,
-        newQty: Number,
-        date: { type: Date, default: Date.now }
-      }
-    ]
+        previousQty: {
+          type: Number,
+          required: true,
+        },
+        newQty: {
+          type: Number,
+          required: true,
+        },
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+      },
+    ],
   },
   { timestamps: true }
 );

@@ -23,9 +23,12 @@ export const getDashboardData = async (req, res) => {
 
     /* ================= SNAPSHOT ================= */
     const totalProducts = products.length;
+    const LOW_STOCK_LIMIT = 1;
+
     const lowStock = products.filter(
-      (p) => p.quantity > 0 && p.quantity < 5
+    (p) => p.quantity > 0 && p.quantity <= LOW_STOCK_LIMIT
     ).length;
+
     const outOfStock = products.filter((p) => p.quantity === 0).length;
 
     const inventoryValue = products.reduce(
@@ -75,15 +78,15 @@ export const getDashboardData = async (req, res) => {
         }
 
         // LOW STOCK
-        if (entry.newQty < 5) {
+        if (entry.newQty > 0 && entry.newQty <= LOW_STOCK_LIMIT) {
           todayActivity.push({
-            product: product.name,
-            type: "Low Stock",
-            qty: entry.newQty,
-            time: new Date(entry.date).toLocaleTimeString(),
-            color: "bg-yellow-500",
-          });
-        }
+           product: product.name,
+           type: "Low Stock",
+           qty: entry.newQty,
+           time: new Date(entry.date).toLocaleTimeString(),
+           color: "bg-yellow-500",
+        });
+       }
       });
     });
 

@@ -14,7 +14,7 @@ export const protect = async (req, res, next) => {
       });
     }
 
-    const token = authHeader.split(" ")[1];
+    const token = authHeader.split(" ")[2];
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 

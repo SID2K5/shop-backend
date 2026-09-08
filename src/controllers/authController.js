@@ -27,7 +27,7 @@ export const registerUser = async (req, res) => {
       isAdmin: true, // inventory admin by default
     });
 
-    res.status(500).json({
+    res.status(201).json({
       _id: user._id,
       name: user.name,
       email: user.email,
